@@ -1,0 +1,31 @@
+rules_version = '2';
+
+/**
+ * Aturan keamanan Firestore untuk koleksi `items`.
+ * Deploy: Firebase Console -> Firestore Database -> Rules
+ * (atau: firebase deploy --only firestore:rules)
+ *
+ * Karena aplikasi ini berjalan tanpa login, maka:
+ * - Siapa pun boleh MEMBACA laporan (katalog terbuka untuk semua).
+ * - Siapa pun boleh MENAMBAH laporan (dengan validasi field wajib).
+ * - Perubahan hanya boleh mengubah field `status` menjadi 'resolved'
+ *   (dipakai tombol "Tandai Selesai").
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /items/{itemId} {
+      allow read: if true;
+
+      allow create: if request.resource.data.title is string
+        && request.resource.data.type in ['lost', 'found']
+        && request.resource.data.status == 'active'
+        && request.resource.data.contactNumber is string;
+
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['status'])
+        && request.resource.data.status == 'resolved';
+
+      allow delete: if false;
+    }
+  }
+}
